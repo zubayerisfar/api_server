@@ -38,14 +38,13 @@ async function loadQuranData() {
       fs.createReadStream(quranPath)
         .pipe(csv())
         .on('data', (row) => {
-          // Parse Quran data
-          const surahNo = parseInt(row.sura_number || row['Surah Number'] || 0);
-          const ayahNo = parseInt(row.ayah_number || row['Ayah Number'] || 0);
-          const textAr = row.ayah_ar || row.text || '';
-          const textEn = row.ayah_en || row.Translation || '';
-          const surahName = row.sura_name || row['Surah Name'] || '';
-          const surahNameAr = row.sura_name_arabic || '';
-          const surahNameRoman = row.sura_name_english || surahName || '';
+          // Parse Quran data - use correct CSV column names
+          const surahNo = parseInt(row.surah_no || 0);
+          const ayahNo = parseInt(row.ayah_no_surah || row.ayah_no_quran || 0);
+          const textAr = row.ayah_ar || '';
+          const textEn = row.ayah_en || '';
+          const surahNameAr = row.surah_name_ar || '';
+          const surahNameRoman = row.surah_name_en || row.surah_name_roman || '';
 
           if (surahNo > 0 && ayahNo > 0) {
             // Store surah info
