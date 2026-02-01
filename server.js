@@ -111,19 +111,19 @@ async function loadHadithData(bookName) {
         .pipe(csv())
         .on('data', (row) => {
           hadithData.hadiths.push({
-            id: row.hadith_id || row.id || Math.random(),
-            hadith_no: row.hadith_number || row.Hadith_Number || '',
+            id: parseInt(row.hadith_id) || 0,
+            hadith_no: row.hadith_no || row.hadith_number || '',
             source_book: bookName,
-            section_name: row.section_name || row.Section || '',
-            chapter_en: row.chapter_en || row.Chapter_EN || '',
-            chapter_bn: row.chapter_bn || row.Chapter_BN || '',
-            chapter_ar: row.chapter_ar || row.Chapter_AR || '',
-            english_text: row.english_text || row.English_Text || '',
-            bangla_text: row.bangla_text || row.Bangla_Text || '',
-            arabic_text: row.arabic_text || row.Arabic_Text || '',
-            english_narrator: row.narrator_en || row.Narrator_EN || '',
-            bangla_narrator: row.narrator_bn || row.Narrator_BN || '',
-            hadith_grade: row.grade || row.Grade || ''
+            section_name: row.section_name || '',
+            chapter_en: row.chapter_en || '',
+            chapter_bn: row.chapter_bn || '',
+            chapter_ar: row.chapter_ar || '',
+            english_text: row.english_text || '',
+            bangla_text: row.bangla_text || '',
+            arabic_text: row.arabic_text || '',
+            english_narrator: row.narrator || '',
+            bangla_narrator: row.narrator || '',
+            hadith_grade: row.status || ''
           });
         })
         .on('end', () => {
