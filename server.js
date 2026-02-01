@@ -365,7 +365,7 @@ app.get('/api/download/hadith', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    message: 'Islamic Content API is running',
+    message: 'তাকওয়া API is running',
     timestamp: new Date().toISOString()
   });
 });
@@ -376,8 +376,8 @@ app.get('/health', (req, res) => {
  */
 app.get('/', (req, res) => {
   res.json({
-    name: 'Islamic Content API',
-    version: '1.0.0',
+    name: 'তাকওয়া API',
+    version: '1.0.1',
     endpoints: {
       quran: {
         'GET /api/quran': 'Get all Quran data',
@@ -411,7 +411,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║   Islamic Content API Started          ║
+║   তাকওয়া API Started                  ║
 ║   Server running on port ${PORT}        ║
 ║   http://localhost:${PORT}              ║
 ╚════════════════════════════════════════╝
