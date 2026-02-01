@@ -4,6 +4,7 @@ const compression = require('compression');
 const fs = require('fs-extra');
 const path = require('path');
 const csv = require('csv-parser');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
@@ -14,30 +15,30 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 const DATA_DIR = path.join(__dirname, 'data');
-const NEWS_FILE = path.join(DATA_DIR, 'news.json');
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB || 'takwa';
+const NEWS_COLLECTION = process.env.NEWS_COLLECTION || 'news';
 
 // In-memory cache for data
 let quranCache = null;
 let hadithCache = {};
 
-// Load news data from file
-async function loadNews() {
-  try {
-    if (!await fs.pathExists(NEWS_FILE)) {
-      await fs.ensureFile(NEWS_FILE);
-      await fs.writeJson(NEWS_FILE, { items: [] }, { spaces: 2 });
-    }
-    const data = await fs.readJson(NEWS_FILE);
-    return Array.isArray(data.items) ? data.items : [];
-  } catch (err) {
-    console.error('Error loading news:', err);
-    return [];
+let mongoClient;
+
+async function getDb() {
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is not set');
   }
+  if (!mongoClient) {
+    mongoClient = new MongoClient(MONGODB_URI);
+    await mongoClient.connect();
+  }
+  return mongoClient.db(MONGODB_DB);
 }
 
-// Save news data to file
-async function saveNews(items) {
-  await fs.writeJson(NEWS_FILE, { items }, { spaces: 2 });
+async function getNewsCollection() {
+  const db = await getDb();
+  return db.collection(NEWS_COLLECTION);
 }
 
 /**
@@ -385,8 +386,22 @@ app.get('/api/download/hadith', async (req, res) => {
  */
 app.get('/api/news', async (req, res) => {
   try {
-    const items = await loadNews();
-    res.json({ success: true, items });
+    const collection = await getNewsCollection();
+    const items = await collection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    const normalized = items.map((item) => ({
+      id: item._id.toString(),
+      title: item.title,
+      content: item.content,
+      imageUrl: item.imageUrl || null,
+      createdAt: item.createdAt
+    }));
+
+    res.json({ success: true, items: normalized });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to load news' });
   }
@@ -411,21 +426,33 @@ app.post('/api/admin/news', async (req, res) => {
       return res.status(400).json({ success: false, error: 'title and content required' });
     }
 
-    const items = await loadNews();
+    const collection = await getNewsCollection();
     const newPost = {
-      id: Date.now().toString(),
       title,
       content,
       imageUrl: imageUrl || null,
       createdAt: new Date().toISOString()
     };
-    items.unshift(newPost);
-    await saveNews(items);
 
-    res.json({ success: true, item: newPost });
+    const result = await collection.insertOne(newPost);
+    res.json({
+      success: true,
+      item: {
+        id: result.insertedId.toString(),
+        ...newPost
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to save news' });
   }
+});
+
+/**
+ * GET /admin
+ * Simple admin page for posting news
+ */
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 /**

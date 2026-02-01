@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="bn">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>তাকওয়া নিউজ অ্যাডমিন</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0D4D4D;
+            color: #fff;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 40px auto;
+            background: #0A3A3A;
+            padding: 24px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin: 12px 0 6px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .status {
+            margin-top: 12px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>নিউজ পোস্ট করুন</h1>
+        <p>এই ফর্মটি MongoDB-তে নিউজ সেভ করবে।</p>
+
+        <label>Admin Token</label>
+        <input id="token" type="password" placeholder="ADMIN_TOKEN" />
+
+        <label>Title</label>
+        <input id="title" type="text" placeholder="শিরোনাম" />
+
+        <label>Content</label>
+        <textarea id="content" rows="6" placeholder="বিস্তারিত"></textarea>
+
+        <label>Image URL (optional)</label>
+        <input id="imageUrl" type="text" placeholder="https://..." />
+
+        <button onclick="submitNews()">পোস্ট করুন</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        async function submitNews() {
+            const token = document.getElementById('token').value.trim();
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            const imageUrl = document.getElementById('imageUrl').value.trim();
+            const status = document.getElementById('status');
+
+            if (!title || !content) {
+                status.textContent = 'Title এবং Content আবশ্যক।';
+                return;
+            }
+
+            status.textContent = 'পোস্ট করা হচ্ছে...';
+            const res = await fetch('/api/admin/news', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'x-admin-token': token } : {})
+                },
+                body: JSON.stringify({ title, content, imageUrl })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                status.textContent = 'নিউজ পোস্ট সফল হয়েছে।';
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                document.getElementById('imageUrl').value = '';
+            } else {
+                status.textContent = data.error || 'পোস্ট ব্যর্থ হয়েছে।';
+            }
+        }
+    </script>
+</body>
+
+</html>
