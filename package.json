@@ -1,6 +1,6 @@
 {
   "name": "takwa-api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "তাকওয়া API - Serving Quran and Hadith data",
   "main": "server.js",
   "scripts": {

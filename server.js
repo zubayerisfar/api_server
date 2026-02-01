@@ -14,10 +14,31 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 const DATA_DIR = path.join(__dirname, 'data');
+const NEWS_FILE = path.join(DATA_DIR, 'news.json');
 
 // In-memory cache for data
 let quranCache = null;
 let hadithCache = {};
+
+// Load news data from file
+async function loadNews() {
+  try {
+    if (!await fs.pathExists(NEWS_FILE)) {
+      await fs.ensureFile(NEWS_FILE);
+      await fs.writeJson(NEWS_FILE, { items: [] }, { spaces: 2 });
+    }
+    const data = await fs.readJson(NEWS_FILE);
+    return Array.isArray(data.items) ? data.items : [];
+  } catch (err) {
+    console.error('Error loading news:', err);
+    return [];
+  }
+}
+
+// Save news data to file
+async function saveNews(items) {
+  await fs.writeJson(NEWS_FILE, { items }, { spaces: 2 });
+}
 
 /**
  * Load Quran data from CSV
@@ -44,16 +65,17 @@ async function loadQuranData() {
           const textAr = row.ayah_ar || '';
           const textEn = row.ayah_en || '';
           const surahNameAr = row.surah_name_ar || '';
-          const surahNameRoman = row.surah_name_en || row.surah_name_roman || '';
+          const surahNameRoman = row.surah_name_roman || '';
+          const surahNameEn = row.surah_name_en || '';
 
           if (surahNo > 0 && ayahNo > 0) {
             // Store surah info
             if (!quranData.surahs[surahNo]) {
               quranData.surahs[surahNo] = {
                 surah_no: surahNo,
-                surah_name_en: surahNameRoman,
+                surah_name_en: surahNameEn,
                 surah_name_ar: surahNameAr,
-                surah_name_roman: surahNameRoman
+                surah_name_roman: surahNameRoman || surahNameEn
               };
             }
 
@@ -358,6 +380,55 @@ app.get('/api/download/hadith', async (req, res) => {
 });
 
 /**
+ * GET /api/news
+ * Public endpoint to fetch news posts
+ */
+app.get('/api/news', async (req, res) => {
+  try {
+    const items = await loadNews();
+    res.json({ success: true, items });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to load news' });
+  }
+});
+
+/**
+ * POST /api/admin/news
+ * Admin endpoint to add news (requires x-admin-token header)
+ */
+app.post('/api/admin/news', async (req, res) => {
+  try {
+    const adminToken = process.env.ADMIN_TOKEN;
+    if (adminToken) {
+      const headerToken = req.headers['x-admin-token'];
+      if (!headerToken || headerToken !== adminToken) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+      }
+    }
+
+    const { title, content, imageUrl } = req.body || {};
+    if (!title || !content) {
+      return res.status(400).json({ success: false, error: 'title and content required' });
+    }
+
+    const items = await loadNews();
+    const newPost = {
+      id: Date.now().toString(),
+      title,
+      content,
+      imageUrl: imageUrl || null,
+      createdAt: new Date().toISOString()
+    };
+    items.unshift(newPost);
+    await saveNews(items);
+
+    res.json({ success: true, item: newPost });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to save news' });
+  }
+});
+
+/**
  * GET /health
  * Health check
  */
@@ -376,7 +447,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     name: 'তাকওয়া API',
-    version: '1.0.1',
+    version: '1.0.2',
     endpoints: {
       quran: {
         'GET /api/quran': 'Get all Quran data',
